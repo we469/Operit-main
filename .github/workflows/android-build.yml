@@ -243,6 +243,9 @@ jobs:
       - name: Publish / Update Nightly Release
         env:
           GH_TOKEN: ${{ github.token }}
+          # release job 没有 checkout，runner 工作目录无 .git 仓库，
+          # gh 需要 GH_REPO 才能确定目标仓库，否则报 failed to run git。
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           # 展示产物
