@@ -1298,20 +1298,34 @@ fun AgentChatInputSection(
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .padding(start = 8.dp)
+                                        .size(36.dp)
+                                        .clickable(
+                                            enabled = true,
+                                            onClick = {
+                                                showModelSelectorPopup.value = false
+                                                showExtraSettingsPopup.value = false
+                                                setShowAttachmentPanel(!showAttachmentPanel)
+                                            },
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = context.getString(R.string.add_attachment),
+                                    tint =
+                                        if (showAttachmentPanel) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+                                        },
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
 
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .padding(start = 8.dp)
-                                            .size(36.dp)
-                                            .clickable(
-                                                enabled = true,
-                                                onClick = {
-                                                    showModelSelectorPopup.value = false
-                                                    showExtraSettingsPopup.value = false
-                                                    setShowAttachmentPanel(!showAttachmentPanel)
-                                                },
-                                            ),
                             Box(
                                 modifier =
                                     Modifier
@@ -1361,21 +1375,6 @@ fun AgentChatInputSection(
                                     )
                                 }
                             }
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = context.getString(R.string.add_attachment),
-                                    tint =
-                                        if (showAttachmentPanel) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
-                                        },
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            }
-
                             Spacer(modifier = Modifier.width(6.dp))
 
                             val actionButtonShape = if (showCancelAction) RoundedCornerShape(10.dp) else CircleShape
