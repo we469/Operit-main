@@ -39,6 +39,8 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -792,57 +794,7 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
     }
 
 
-    // 当showWebView或showAiComputer状态改变时，更新TopAppBar的actions
-    // 使用DisposableEffect确保当AIChatScreen离开组合时，actions被清空
-    LaunchedEffect(isCurrentScreen, embedded, showWebView, showAiComputer, isWorkspacePreparing, appBarContentColor, hasBoundWorkspace) {
-        if (isCurrentScreen && !embedded) {
-            setTopBarActions {
-                // AI电脑模式切换按钮
-                IconButton(
-                        enabled = !isWorkspacePreparing,
-                        onClick = {
-                            actualViewModel.onAiComputerButtonClick()
-                        }
-                ) {
-                    Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = stringResource(R.string.ai_computer),
-                            tint =
-                            if (showAiComputer) MaterialTheme.colorScheme.primaryContainer
-                            else appBarContentColor
-                    )
-                }
-
-                // Web开发模式切换按钮
-                IconButton(
-                        enabled = !isWorkspacePreparing,
-                        onClick = {
-                            actualViewModel.onWorkspaceButtonClick()
-                        }
-                ) {
-                    if (isWorkspacePreparing) {
-                        CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = appBarContentColor
-                        )
-                    } else {
-                        Icon(
-                                imageVector =
-                                if (hasBoundWorkspace) Icons.Default.Code
-                                else Icons.Default.CodeOff,
-                                contentDescription =
-                                if (hasBoundWorkspace) stringResource(R.string.workspace)
-                                else stringResource(R.string.setup_workspace),
-                                tint =
-                                if (showWebView) MaterialTheme.colorScheme.primaryContainer
-                                else appBarContentColor
-                        )
-                    }
-                }
-            }
-        }
-    }
+    // 终端与工作区按钮已迁移到输入栏工具栏（AgentChatInputSection.onTerminalClick/onWorkspaceClick）
 
     // 导出相关状态
     var showExportPlatformDialog by remember { mutableStateOf(false) }
@@ -1135,59 +1087,50 @@ val actualViewModel: ChatViewModel = viewModel ?: viewModel { ChatViewModel(cont
                         onOpenCharacterSettings = onNavigateToModelPrompts
                     )
 
-                    AnimatedVisibility(
-                        visible = showChatHistorySelector,
-                        enter = fadeIn(animationSpec = tween(300)),
-                        exit = fadeOut(animationSpec = tween(300)),
-                        modifier = Modifier.matchParentSize()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.3f))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    actualViewModel.toggleChatHistorySelector()
-                                }
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = showChatHistorySelector,
-                        enter = androidx.compose.animation.slideInHorizontally(
-                            initialOffsetX = { -it },
-                            animationSpec = tween(300)
-                        ),
-                        exit = androidx.compose.animation.slideOutHorizontally(
-                            targetOffsetX = { -it },
-                            animationSpec = tween(300)
-                        ),
-                        modifier = Modifier.matchParentSize()
-                    ) {
-                        val chatHistorySearchQuery by actualViewModel.chatHistorySearchQuery.collectAsState()
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Box(modifier = Modifier.align(Alignment.TopStart)) {
-                                ChatHistorySelectorPanel(
-                                    actualViewModel = actualViewModel,
-                                    chatHistories = displayedChatHistories,
-                                    currentChatId = currentChatId ?: "",
-                                    showChatHistorySelector = showChatHistorySelector,
-                                    historyListState = historyListState,
-                                    onChatScreenGestureConsumed = onChatScreenGestureConsumedChange,
-                                    searchQuery = chatHistorySearchQuery,
-                                    onSearchQueryChange = actualViewModel::onChatHistorySearchQueryChange,
-                                    activePrompt = activePrompt,
-                                    historyDisplayMode = historyDisplayMode,
-                                    onDisplayModeChange = { historyDisplayMode = it },
-                                    autoSwitchCharacterCard = autoSwitchCharacterCard,
-                                    onAutoSwitchCharacterCardChange = { autoSwitchCharacterCard = it },
-                                    autoSwitchChatOnCharacterSelect = autoSwitchChatOnCharacterSelect,
-                                    onAutoSwitchChatOnCharacterSelectChange = {
-                                        autoSwitchChatOnCharacterSelect = it
-                                    }
+                    // 聊天历史侧边栏使用全屏 Dialog（decorFitsSystemWindows=false）实现：
+                    // 让遮罩与侧边栏面板覆盖到状态栏顶部（沉浸式），面板直角贴边，主页面与侧边栏之间不再有圆角/间距
+                    if (showChatHistorySelector) {
+                        Dialog(
+                            onDismissRequest = { actualViewModel.toggleChatHistorySelector() },
+                            properties = DialogProperties(
+                                usePlatformDefaultWidth = false,
+                                decorFitsSystemWindows = false
+                            )
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.3f))
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null
+                                        ) {
+                                            actualViewModel.toggleChatHistorySelector()
+                                        }
                                 )
+                                Box(modifier = Modifier.align(Alignment.TopStart)) {
+                                    val chatHistorySearchQuery by actualViewModel.chatHistorySearchQuery.collectAsState()
+                                    ChatHistorySelectorPanel(
+                                        actualViewModel = actualViewModel,
+                                        chatHistories = displayedChatHistories,
+                                        currentChatId = currentChatId ?: "",
+                                        showChatHistorySelector = showChatHistorySelector,
+                                        historyListState = historyListState,
+                                        onChatScreenGestureConsumed = onChatScreenGestureConsumedChange,
+                                        searchQuery = chatHistorySearchQuery,
+                                        onSearchQueryChange = actualViewModel::onChatHistorySearchQueryChange,
+                                        activePrompt = activePrompt,
+                                        historyDisplayMode = historyDisplayMode,
+                                        onDisplayModeChange = { historyDisplayMode = it },
+                                        autoSwitchCharacterCard = autoSwitchCharacterCard,
+                                        onAutoSwitchCharacterCardChange = { autoSwitchCharacterCard = it },
+                                        autoSwitchChatOnCharacterSelect = autoSwitchChatOnCharacterSelect,
+                                        onAutoSwitchChatOnCharacterSelectChange = {
+                                            autoSwitchChatOnCharacterSelect = it
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -1895,6 +1838,10 @@ private fun ChatInputBottomBar(
                 replyToMessage = replyToMessage,
                 onClearReply = actualViewModel::clearReplyToMessage,
                 isWorkspaceOpen = isWorkspaceOpen,
+                onTerminalClick = { actualViewModel.onAiComputerButtonClick() },
+                onWorkspaceClick = { actualViewModel.onWorkspaceButtonClick() },
+                workspacePreparing = isWorkspacePreparing,
+                workspaceBound = hasBoundWorkspace,
                 enableThinkingMode = enableThinkingMode,
                 onToggleThinkingMode = actualViewModel::toggleThinkingMode,
                 thinkingQualityLevel = thinkingQualityLevel,

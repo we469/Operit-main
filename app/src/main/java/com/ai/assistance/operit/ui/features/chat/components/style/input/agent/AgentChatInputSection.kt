@@ -25,10 +25,13 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.CodeOff
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.DataObject
@@ -135,7 +138,6 @@ import com.ai.assistance.operit.ui.common.icons.MaterialIconNameResolver
 import com.ai.assistance.operit.ui.common.animations.SimpleAnimatedVisibility
 import com.ai.assistance.operit.ui.features.chat.components.AttachmentChip
 import com.ai.assistance.operit.ui.features.chat.components.AttachmentSelectorPopupPanel
-import com.ai.assistance.operit.ui.features.chat.components.FullscreenInputDialog
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.CharacterCardMemoryBindingSwitchConfirmDialog
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.CharacterCardModelBindingSwitchConfirmDialog
 import com.ai.assistance.operit.ui.features.chat.components.style.input.common.InputMenuToggleHookParams
@@ -193,6 +195,10 @@ fun AgentChatInputSection(
     replyToMessage: ChatMessage? = null,
     onClearReply: (() -> Unit)? = null,
     isWorkspaceOpen: Boolean = false,
+    onTerminalClick: () -> Unit = {},
+    onWorkspaceClick: () -> Unit = {},
+    workspacePreparing: Boolean = false,
+    workspaceBound: Boolean = false,
     enableThinkingMode: Boolean = false,
     onToggleThinkingMode: () -> Unit = {},
     thinkingQualityLevel: Int = ApiPreferences.DEFAULT_THINKING_QUALITY_LEVEL,
@@ -233,7 +239,6 @@ fun AgentChatInputSection(
     onSendPendingQueueMessage: (Long) -> Unit = {},
 ) {
     val showTokenLimitDialog = remember { mutableStateOf(false) }
-    val showFullscreenInput = remember { mutableStateOf(false) }
     val showModelSelectorPopup = remember { mutableStateOf(false) }
     val showExtraSettingsPopup = remember { mutableStateOf(false) }
     var showCharacterCardBindingSwitchConfirm by remember { mutableStateOf(false) }
@@ -871,15 +876,6 @@ fun AgentChatInputSection(
                                 disabledContainerColor = Color.Transparent,
                             ),
                         shape = RoundedCornerShape(14.dp),
-                        trailingIcon = {
-                            IconButton(onClick = { showFullscreenInput.value = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Fullscreen,
-                                    contentDescription = stringResource(R.string.chat_fullscreen_input),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        },
                         enabled = !isProcessing || allowTextInputWhileProcessing,
                     )
 
@@ -990,11 +986,61 @@ fun AgentChatInputSection(
                             )
                         }
 
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(start = 8.dp)
+                                    .size(36.dp)
+                                    .clickable(
+                                        enabled = true,
+                                        onClick = onTerminalClick,
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Terminal,
+                                contentDescription = context.getString(R.string.ai_computer),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(start = 8.dp)
+                                    .size(36.dp)
+                                    .clickable(
+                                        enabled = !workspacePreparing,
+                                        onClick = onWorkspaceClick,
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (workspacePreparing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Icon(
+                                    imageVector =
+                                        if (workspaceBound) Icons.Default.Code
+                                        else Icons.Default.CodeOff,
+                                    contentDescription =
+                                        if (workspaceBound) context.getString(R.string.workspace)
+                                        else context.getString(R.string.setup_workspace),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.width(6.dp))
 
-                        val actionButtonBackground =
+                        val actionButtonShape = if (showCancelAction) RoundedCornerShape(10.dp) else CircleShape
+                            val actionButtonBackground =
                             when {
-                                showCancelAction -> MaterialTheme.colorScheme.error
+                                showCancelAction -> MaterialTheme.colorScheme.primary
                                 showQueueAction -> MaterialTheme.colorScheme.tertiary
                                 canSendMessage ->
                                     if (isOverTokenLimit) {
@@ -1007,7 +1053,7 @@ fun AgentChatInputSection(
 
                         val actionButtonIconTint =
                             when {
-                                showCancelAction -> MaterialTheme.colorScheme.onError
+                                showCancelAction -> MaterialTheme.colorScheme.onPrimary
                                 showQueueAction -> MaterialTheme.colorScheme.onTertiary
                                 canSendMessage ->
                                     if (isOverTokenLimit) {
@@ -1036,7 +1082,7 @@ fun AgentChatInputSection(
                                 modifier =
                                     Modifier
                                         .size(36.dp)
-                                        .background(actionButtonBackground, CircleShape)
+                                        .background(actionButtonBackground, actionButtonShape)
                                         .clickable(
                                             enabled = sendButtonEnabled,
                                             onClick = {
@@ -1070,10 +1116,10 @@ fun AgentChatInputSection(
                                 Icon(
                                     imageVector =
                                         when {
-                                            showCancelAction -> Icons.Default.Close
+                                            showCancelAction -> Icons.Default.Stop
                                             showQueueAction -> Icons.Default.Add
                                             canSendMessage -> Icons.AutoMirrored.Filled.Send
-                                            else -> Icons.Default.Mic
+                                            else -> Icons.AutoMirrored.Filled.Send
                                         },
                                     contentDescription =
                                         when {
@@ -1171,15 +1217,6 @@ fun AgentChatInputSection(
                                     disabledContainerColor = Color.Transparent,
                                 ),
                             shape = RoundedCornerShape(14.dp),
-                            trailingIcon = {
-                                IconButton(onClick = { showFullscreenInput.value = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Fullscreen,
-                                        contentDescription = stringResource(R.string.chat_fullscreen_input),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            },
                             enabled = !isProcessing || allowTextInputWhileProcessing,
                         )
 
@@ -1275,6 +1312,55 @@ fun AgentChatInputSection(
                                                     setShowAttachmentPanel(!showAttachmentPanel)
                                                 },
                                             ),
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .padding(start = 8.dp)
+                                        .size(36.dp)
+                                        .clickable(
+                                            enabled = true,
+                                            onClick = onTerminalClick,
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Terminal,
+                                    contentDescription = context.getString(R.string.ai_computer),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .padding(start = 8.dp)
+                                        .size(36.dp)
+                                        .clickable(
+                                            enabled = !workspacePreparing,
+                                            onClick = onWorkspaceClick,
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (workspacePreparing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector =
+                                            if (workspaceBound) Icons.Default.Code
+                                            else Icons.Default.CodeOff,
+                                        contentDescription =
+                                            if (workspaceBound) context.getString(R.string.workspace)
+                                            else context.getString(R.string.setup_workspace),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -1292,9 +1378,10 @@ fun AgentChatInputSection(
 
                             Spacer(modifier = Modifier.width(6.dp))
 
+                            val actionButtonShape = if (showCancelAction) RoundedCornerShape(10.dp) else CircleShape
                             val actionButtonBackground =
                                 when {
-                                    showCancelAction -> MaterialTheme.colorScheme.error
+                                    showCancelAction -> MaterialTheme.colorScheme.primary
                                     showQueueAction -> MaterialTheme.colorScheme.tertiary
                                     canSendMessage ->
                                         if (isOverTokenLimit) {
@@ -1307,7 +1394,7 @@ fun AgentChatInputSection(
 
                             val actionButtonIconTint =
                                 when {
-                                    showCancelAction -> MaterialTheme.colorScheme.onError
+                                    showCancelAction -> MaterialTheme.colorScheme.onPrimary
                                     showQueueAction -> MaterialTheme.colorScheme.onTertiary
                                     canSendMessage ->
                                         if (isOverTokenLimit) {
@@ -1336,7 +1423,7 @@ fun AgentChatInputSection(
                                     modifier =
                                         Modifier
                                             .size(36.dp)
-                                            .background(actionButtonBackground, CircleShape)
+                                            .background(actionButtonBackground, actionButtonShape)
                                             .clickable(
                                                 enabled = sendButtonEnabled,
                                                 onClick = {
@@ -1370,10 +1457,10 @@ fun AgentChatInputSection(
                                     Icon(
                                         imageVector =
                                             when {
-                                                showCancelAction -> Icons.Default.Close
+                                                showCancelAction -> Icons.Default.Stop
                                                 showQueueAction -> Icons.Default.Add
                                                 canSendMessage -> Icons.AutoMirrored.Filled.Send
-                                                else -> Icons.Default.Mic
+                                                else -> Icons.AutoMirrored.Filled.Send
                                             },
                                         contentDescription =
                                             when {
@@ -1468,14 +1555,6 @@ fun AgentChatInputSection(
                 onDismiss = { setShowAttachmentPanel(false) },
             )
 
-            if (showFullscreenInput.value) {
-                FullscreenInputDialog(
-                    value = userMessage,
-                    onValueChange = onUserMessageChange,
-                    onDismiss = { showFullscreenInput.value = false },
-                    onConfirm = { showFullscreenInput.value = false },
-                )
-            }
         }
     }
 }

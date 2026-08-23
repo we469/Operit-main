@@ -1206,7 +1206,7 @@ fun ChatHistorySelectorPanel(
         autoSwitchChatOnCharacterSelect: Boolean,
         onAutoSwitchChatOnCharacterSelectChange: (Boolean) -> Unit
 ) {
-    // 历史选择器面板（不再包含遮罩层，遮罩层已在外部处理）
+    // 历史选择器面板（不再包含遮罩层，遮罩层已在外部处理；直角贴边，背景直接延伸到状态栏顶部）
     Box(
             modifier =
                     Modifier.width(280.dp)
@@ -1215,14 +1215,13 @@ fun ChatHistorySelectorPanel(
                                     color =
                                             MaterialTheme.colorScheme.surface.copy(
                                                     alpha = 0.95f
-                                            ),
-                                    shape = RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
+                                            )
                             )
     ) {
         val activeStreamingChatIds by actualViewModel.activeStreamingChatIds.collectAsState()
-        // 直接使用ChatHistorySelector
+        // 直接使用ChatHistorySelector（内容避开状态栏图标，面板背景已延伸到状态栏顶部）
         ChatHistorySelector(
-                modifier = Modifier.fillMaxSize().padding(top = 8.dp),
+                modifier = Modifier.fillMaxSize().statusBarsPadding().padding(top = 8.dp),
                 onNewChat = { characterCardName, characterGroupId ->
                     actualViewModel.createNewChat(characterCardName, characterGroupId)
                     // 创建新对话后自动收起侧边框
