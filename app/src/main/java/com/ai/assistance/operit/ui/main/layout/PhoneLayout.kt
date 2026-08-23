@@ -18,9 +18,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RectangleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -120,8 +121,8 @@ fun PhoneLayout(
         val dragThreshold = 40f
 
         val drawerAppearance = rememberNavigationDrawerAppearance()
-        // 抽屉是覆盖式侧边栏，使用矩形边界，避免出现卡片化圆角。
-        val drawerShape = RectangleShape
+        // 抽屉是覆盖式侧边栏，使用矩形边界（0dp 圆角），避免出现卡片化圆角。
+        val drawerShape = RoundedCornerShape(0.dp)
 
         // 拖拽状态 - 用于控制抽屉拉出和关闭
         val draggableState = rememberDraggableState { delta ->
