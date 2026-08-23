@@ -243,6 +243,7 @@ jobs:
       - name: Publish / Update Nightly Release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           # 展示产物
